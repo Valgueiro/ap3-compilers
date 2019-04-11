@@ -1,2 +1,7 @@
-int a = 3 * 5;
-float b = 3 && 4;
+int a(string a, string b){
+    return a+b;
+}
+
+string x(){
+    return s+c;
+}

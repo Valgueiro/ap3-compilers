@@ -10,9 +10,18 @@ class Type:
     STRING = "string"
     BOOLEAN = "boolean"
 
+# Value/IDs = {'type':, 'value': }
+# Params = {'type': , 'name':}
+# Functions = {'type': , 'params'}
 
 class CymbolCheckerVisitor(CymbolVisitor):
     id_values = {}
+    functions = {}
+
+    def visitFiile(self, ctx: CymbolParser.FiileContext):
+        self.visitChildren(ctx)
+        for func in self.functions.keys():
+            print(self.functions[func])
 
     def visitIntExpr(self, ctx: CymbolParser.IntExprContext):
         value = int(ctx.getText())
@@ -133,6 +142,23 @@ class CymbolCheckerVisitor(CymbolVisitor):
                 result = left['value'] or right ['value']
             return {'type': Type.BOOLEAN, 'value': result}
         return 0
+
+    def visitFuncDecl(self, ctx: CymbolParser.FuncDeclContext):
+        return_type = ctx.tyype().getText()
+        name = ctx.ID().getText()
+        params = {}
+        if ctx.paramTypeList() is not None:
+            params = self.visit(ctx.paramTypeList())
+        self.functions[name] = {'type': return_type, 'params': params}
+         
+    def visitParamTypeList(self, ctx: CymbolParser.ParamTypeListContext):
+        params = []
+        for param in ctx.paramType():
+            params.append(self.visit(param))
+        return params
+
+    def visitParamType(self, ctx: CymbolParser.ParamTypeContext):
+        return {'type': ctx.tyype().getText(), 'name': ctx.ID().getText()}
 
     def aggregateResult(self, aggregate: Type, next_result: Type):
         return next_result if next_result != None else aggregate
