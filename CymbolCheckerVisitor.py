@@ -49,6 +49,7 @@ class CymbolCheckerVisitor(CymbolVisitor):
             exit(1)
         else:
             if ctx.expr() is not None:
+                result = self.visit(ctx.expr())
                 compatible = self.isCompatible(result['type'], tyype)[0]
                 if not compatible:
                     print("Error in VarDecl...")
