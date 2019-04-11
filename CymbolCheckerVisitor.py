@@ -10,7 +10,9 @@ class Type:
     STRING = "string"
     BOOLEAN = "boolean"
 
-# Value/IDs = {'type':, 'value': }
+
+numbers_type = [Type.INT, Type.FLOAT]
+# Value/IDs = {'type':}
 # Params = {'type': , 'name':}
 # Functions = {'type': , 'params'}
 
@@ -43,13 +45,13 @@ class CymbolCheckerVisitor(CymbolVisitor):
 
         if (tyype == Type.VOID):
             result = Type.VOID
-            print("Mensagem de erro 1...")
+            print("Error in VarDecl...")
             exit(1)
         else:
             if ctx.expr() is not None:
                 compatible = self.isCompatible(result['type'], tyype)[0]
                 if not compatible:
-                    print("Mensagem de erro 2...")
+                    print("Error in VarDecl...")
                     exit(2)
             out = {'type': tyype}
             self.id_values[var_name] = out
@@ -60,7 +62,8 @@ class CymbolCheckerVisitor(CymbolVisitor):
         if expr['type'] in [Type.INT, Type.FLOAT]:
             return {'type': expr['type']}
         else:
-            print('error')  
+            print('Error in SignedExpr')
+            exit(3)  
         return 0
 
     def visitNotExpr(self, ctx: CymbolParser.NotExprContext):
@@ -68,53 +71,45 @@ class CymbolCheckerVisitor(CymbolVisitor):
 
         if expr['type'] == Type.BOOLEAN:
             return {'type': Type.BOOLEAN}
+        else:
+            print('Error in NotExpr')
+            exit(3)  
         return 0
 
     def visitComparisonExpr(self, ctx: CymbolParser.ComparisonExprContext):
         left = self.visit(ctx.expr()[0])
         right = self.visit(ctx.expr()[1])
-        op = ctx.op.text
         
-        result = eval(str(left["value"]) + op + str(right["value"]))
-        return {'type': Type.BOOLEAN, 'value': result}
+        if left['type'] == Type.BOOLEAN and right['type'] == Type.BOOLEAN:
+            return {'type': Type.BOOLEAN}
+        else:
+            print('Error in ComparisonExpr')
+            exit(3) 
 
     def visitMulDivExpr(self, ctx: CymbolParser.MulDivExprContext):
         left = self.visit(ctx.expr()[0])
         right = self.visit(ctx.expr()[1])
-        op = ctx.op.text
+        compatible, result = self.isCompatible(left['type'], right['right'])
 
-        if op == '*':
-            result = left["value"] * right["value"]
+        if compatible and result in numbers_type:
+            return {'type': result}
         else:
-            result = left["value"] / right["value"]
-
-        print(result)
-        return {'type': Type.INT}
+            print('Error in MulDiv')
+            exit(3) 
 
     def visitAddSubExpr(self, ctx: CymbolParser.AddSubExprContext):
         left = self.visit(ctx.expr()[0])
         right = self.visit(ctx.expr()[1])
-        op = ctx.op.text
+        compatible, result = self.isCompatible(left['type'], right['right'])
 
-        if op == '+':
-            result = left["value"] + right["value"]
+        if compatible and result in numbers_type:
+            return {'type': result}
         else:
-            result = left["value"] - right["value"]
-
-        print(result)
-        return {'type': Type.INT, 'value': result}
+            print('Error in AddSub')
+            exit(3) 
 
     def visitEqExpr(self, ctx: CymbolParser.EqExprContext):
-        left = self.visit(ctx.expr()[0])
-        right = self.visit(ctx.expr()[1])
-        op = ctx.op.text
-
-        if op == '==':
-            result = (left["value"] == right["value"])
-        else:
-            result = (left["value"] != right["value"])
-
-        return {'type': Type.BOOLEAN, 'value': result}
+        return {'type': Type.BOOLEAN}
 
     def visitParenExpr(self, ctx: CymbolParser.ParenExprContext):
         return self.visit(ctx.expr())   
@@ -122,15 +117,13 @@ class CymbolCheckerVisitor(CymbolVisitor):
     def visitBoolExpr(self, ctx: CymbolParser.BoolExprContext):
         left = self.visit(ctx.expr()[0])
         right = self.visit(ctx.expr()[1])
-        op = ctx.op.text
+        compatible, result = self.isCompatible(left['type'], right['type'])
 
-        if left['type'] == Type.BOOLEAN and right['type'] == Type.BOOLEAN:
-            if op == '&&':
-                result = left['value'] and right ['value']
-            else:
-                result = left['value'] or right ['value']
-            return {'type': Type.BOOLEAN, 'value': result}
-        return 0
+        if compatible and result == Type.BOOLEAN:
+            return {'type': Type.BOOLEAN}
+        else:
+            print('Error in BoolExpr')
+            exit(3) 
 
     def visitFuncDecl(self, ctx: CymbolParser.FuncDeclContext):
         return_type = ctx.tyype().getText()
@@ -159,23 +152,20 @@ class CymbolCheckerVisitor(CymbolVisitor):
         for index, param in enumerate(params_types):
             if func['params'][index]['type'] != param:
                 print("Error: wrong params")
-                return 0
+                exit(3)
         
         return {'type': func['type']}
 
     def visitExprList(self, ctx: CymbolParser.ExprListContext):
         expr_types = []
         for expr in ctx.expr():
-            print(expr.getText())
             expr_types.append(self.visit(expr)['type'])
-        print
         return expr_types
 
     def aggregateResult(self, aggregate: Type, next_result: Type):
         return next_result if next_result != None else aggregate
 
     def isCompatible(self, f_type, s_type):
-        numbers_type = [Type.INT, Type.FLOAT]
         if f_type == s_type:
             return True, f_type
         elif f_type in numbers_type and s_type in numbers_type:
