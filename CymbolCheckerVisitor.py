@@ -20,29 +20,22 @@ class CymbolCheckerVisitor(CymbolVisitor):
 
     def visitFiile(self, ctx: CymbolParser.FiileContext):
         self.visitChildren(ctx)
-        for func in self.functions.keys():
-            print(self.functions[func])
 
     def visitIntExpr(self, ctx: CymbolParser.IntExprContext):
-        value = int(ctx.getText())
-        return {'type': Type.INT, 'value': value}
+        return {'type': Type.INT}
 
     def visitStringExpr(self, ctx: CymbolParser.StringExprContext):
-        value = ctx.getText()
-        return {'type': Type.STRING, 'value': value}
+        return {'type': Type.STRING}
 
     def visitFloatExpr(self, ctx: CymbolParser.FloatExprContext):
-        value = float(ctx.getText())
-        return {'type': Type.FLOAT, 'value': value}
+        return {'type': Type.FLOAT}
 
     def visitBooleanExpr(self, ctx: CymbolParser.BooleanExprContext):
-        value = bool(ctx.getText())
-        return {'type': Type.BOOLEAN, 'value': value}
+        return {'type': Type.BOOLEAN}
 
     def visitVarIdExpr(self, ctx: CymbolParser.VarIdExprContext):
-        var_name = ctx.ID.getText()
+        var_name = ctx.ID().getText()
         return self.id_values[var_name]
-
 
     def visitVarDecl(self, ctx: CymbolParser.VarDeclContext):
         var_name = ctx.ID().getText()
@@ -53,39 +46,35 @@ class CymbolCheckerVisitor(CymbolVisitor):
             print("Mensagem de erro 1...")
             exit(1)
         else:
-            if ctx.expr() != None:
-                result = self.visit(ctx.expr())
-                if result['type'] != tyype:
+            if ctx.expr() is not None:
+                compatible = self.isCompatible(result['type'], tyype)[0]
+                if not compatible:
                     print("Mensagem de erro 2...")
                     exit(2)
-                out = {'type': tyype, 'value': result['value']}
-                self.id_values[var_name] = tyype
-
-        return out
+            out = {'type': tyype}
+            self.id_values[var_name] = out
 
     def visitSignedExpr(self, ctx: CymbolParser.SignedExprContext):
         expr = self.visit(ctx.expr)
-        op = ctx.op.text
 
         if expr['type'] in [Type.INT, Type.FLOAT]:
-            value = expr['value']
-            if op == '-':
-                value *= -1
-            return {'type': expr['type'], 'value': value}
+            return {'type': expr['type']}
+        else:
+            print('error')  
         return 0
 
     def visitNotExpr(self, ctx: CymbolParser.NotExprContext):
         expr = self.visit(ctx.expr)
 
         if expr['type'] == Type.BOOLEAN:
-            return {'type': Type.BOOLEAN, 'value': not expr['value']}
+            return {'type': Type.BOOLEAN}
         return 0
 
     def visitComparisonExpr(self, ctx: CymbolParser.ComparisonExprContext):
         left = self.visit(ctx.expr()[0])
         right = self.visit(ctx.expr()[1])
         op = ctx.op.text
-
+        
         result = eval(str(left["value"]) + op + str(right["value"]))
         return {'type': Type.BOOLEAN, 'value': result}
 
@@ -100,7 +89,7 @@ class CymbolCheckerVisitor(CymbolVisitor):
             result = left["value"] / right["value"]
 
         print(result)
-        return {'type': Type.INT, 'value': result}
+        return {'type': Type.INT}
 
     def visitAddSubExpr(self, ctx: CymbolParser.AddSubExprContext):
         left = self.visit(ctx.expr()[0])
@@ -160,8 +149,39 @@ class CymbolCheckerVisitor(CymbolVisitor):
     def visitParamType(self, ctx: CymbolParser.ParamTypeContext):
         return {'type': ctx.tyype().getText(), 'name': ctx.ID().getText()}
 
+    def visitFunctionCallExpr(self, ctx: CymbolParser.FunctionCallExprContext):
+        func_name = ctx.ID().getText()
+        func = self.functions[func_name]
+        params_types = []
+        if ctx.exprList() is not None:
+            params_types = self.visit(ctx.exprList())
+        
+        for index, param in enumerate(params_types):
+            if func['params'][index]['type'] != param:
+                print("Error: wrong params")
+                return 0
+        
+        return {'type': func['type']}
+
+    def visitExprList(self, ctx: CymbolParser.ExprListContext):
+        expr_types = []
+        for expr in ctx.expr():
+            print(expr.getText())
+            expr_types.append(self.visit(expr)['type'])
+        print
+        return expr_types
+
     def aggregateResult(self, aggregate: Type, next_result: Type):
         return next_result if next_result != None else aggregate
 
+    def isCompatible(self, f_type, s_type):
+        numbers_type = [Type.INT, Type.FLOAT]
+        if f_type == s_type:
+            return True, f_type
+        elif f_type in numbers_type and s_type in numbers_type:
+            return True, Type.FLOAT
+        else:
+            return False, None
+            
 
 

@@ -1,7 +1,6 @@
-int a(string a, string b){
+string a(string a, string b){
     return a+b;
 }
-
-string x(){
-    return s+c;
-}
+string c = "asdhas";
+int d = "string";
+int e = a(c,d);
