@@ -1,5 +1,6 @@
-boolean a = true;
-string foo(string x, string b, string s){
-    if(true) return "miss";
-    return "return" + x + b + s; 
+int a = 3;
+int y = 2;
+boolean foo(float b, float x){
+    if(b) return false; 
 }
+boolean c = foo(a, y);

@@ -50,8 +50,8 @@ class CymbolCheckerVisitor(CymbolVisitor):
         else:
             if ctx.expr() is not None:
                 result = self.visit(ctx.expr())
-                compatible = self.isCompatible(result['type'], tyype)[0]
-                if not compatible:
+                canReceive = self.canReceive(tyype, result['type'])
+                if not canReceive:
                     print("Error in VarDecl...")
                     exit(2)
             out = {'type': tyype}
@@ -167,7 +167,9 @@ class CymbolCheckerVisitor(CymbolVisitor):
     def visitIfStat(self, ctx: CymbolParser.IfStatContext):
         condition = self.visit(ctx.expr())
         if condition['type'] != Type.BOOLEAN:
-            print('If stat Error')
+            out = "TypeError: Wrong type at line " + str(ctx.start.line) + " column " + str(ctx.expr().start.column)
+            out += ". Passed "+  condition['type'] + ", expected boolean."
+            print(out)
             exit(3)
 
     def visitReturnStat(self, ctx: CymbolParser.ReturnStatContext):
@@ -189,9 +191,17 @@ class CymbolCheckerVisitor(CymbolVisitor):
         if ctx.exprList() is not None:
             params_types = self.visit(ctx.exprList())
         
+        if len(params_types) != len(func['params']):
+            out = "ParamsError: Wrong number of parameters at line " + str(ctx.start.line) + " column " + str(ctx.start.column)
+            out += ". Passed "+  str(len(params_types)) + ", expected " + str(len(func['params'])) + "."
+            print(out)
+            exit(3)
+
         for index, param in enumerate(params_types):
-            if func['params'][index]['type'] != param:
-                print("Error: wrong params")
+            if not self.canReceive(func['params'][index]['type'], param['type']):
+                out = "TypeError: Wrong parameter passed at line " + param['line'] + " column " + param['column']
+                out += ". Passed "+ param['type'] + ", expected " + func['params'][index]['type'] + "."
+                print(out)
                 exit(3)
         
         return {'type': func['type']}
@@ -199,7 +209,10 @@ class CymbolCheckerVisitor(CymbolVisitor):
     def visitExprList(self, ctx: CymbolParser.ExprListContext):
         expr_types = []
         for expr in ctx.expr():
-            expr_types.append(self.visit(expr)['type'])
+            val = self.visit(expr)
+            val['line'] = str(expr.start.line)
+            val['column'] = str(expr.start.column)
+            expr_types.append(val)
         return expr_types
 
     def aggregateResult(self, aggregate: Type, next_result: Type):
@@ -212,6 +225,14 @@ class CymbolCheckerVisitor(CymbolVisitor):
             return True, Type.FLOAT
         else:
             return False, None
+    
+    def canReceive(self, dest_type, source_type):
+        if dest_type == source_type:
+            return True
+        elif dest_type == Type.FLOAT and source_type == Type.INT:
+            return True
+        else:
+            return False
             
 
 
