@@ -56,6 +56,14 @@ class CymbolCheckerVisitor(CymbolVisitor):
                     exit(2)
             out = {'type': tyype}
             self.id_values[var_name] = out
+    
+    def visitAssignStat(self, ctx: CymbolParser.AssignStatContext):
+        old_val = self.id_values[ctx.ID().getText()]
+        new_val = self.visit(ctx.expr())
+
+        if old_val['type'] != new_val['type']:
+            print('Assign error')
+            exit(3)
 
     def visitSignedExpr(self, ctx: CymbolParser.SignedExprContext):
         expr = self.visit(ctx.expr)
@@ -133,7 +141,30 @@ class CymbolCheckerVisitor(CymbolVisitor):
         if ctx.paramTypeList() is not None:
             params = self.visit(ctx.paramTypeList())
         self.functions[name] = {'type': return_type, 'params': params}
-         
+
+        return_block = self.visit(ctx.block())
+
+        if return_block['type'] != return_type:
+            print('Error in block')
+            exit(3)
+    
+    def visitBlock(self, ctx: CymbolParser.BlockContext):
+        tyype = Type.VOID
+        for stat in ctx.stat():
+            ret = self.visit(stat)
+            if ret is not None and 'type' in ret:
+                tyype = ret['type']
+        return {'type': tyype}
+    
+    def visitIfStat(self, ctx: CymbolParser.IfStatContext):
+        condition = self.visit(ctx.expr())
+        if condition['type'] != Type.BOOLEAN:
+            print('If stat Error')
+            exit(3)
+
+    def visitReturnStat(self, ctx: CymbolParser.ReturnStatContext):
+        return self.visit(ctx.expr())
+
     def visitParamTypeList(self, ctx: CymbolParser.ParamTypeListContext):
         params = []
         for param in ctx.paramType():
