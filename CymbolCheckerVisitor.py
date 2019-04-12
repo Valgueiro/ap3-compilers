@@ -109,9 +109,9 @@ class CymbolCheckerVisitor(CymbolVisitor):
     def visitAddSubExpr(self, ctx: CymbolParser.AddSubExprContext):
         left = self.visit(ctx.expr()[0])
         right = self.visit(ctx.expr()[1])
-        compatible, result = self.isCompatible(left['type'], right['right'])
+        compatible, result = self.isCompatible(left['type'], right['type'])
 
-        if compatible and result in numbers_type:
+        if compatible:
             return {'type': result}
         else:
             print('Error in AddSub')
@@ -142,13 +142,21 @@ class CymbolCheckerVisitor(CymbolVisitor):
             params = self.visit(ctx.paramTypeList())
         self.functions[name] = {'type': return_type, 'params': params}
 
-        return_block = self.visit(ctx.block())
+        #define params variables
+        for param in params:
+            self.id_values[param['name']] = {'type': param['type']}
 
+        return_block = self.visitBlock(ctx.block(), params)
+        
+        #remove params variables
+        for param in params:
+            del self.id_values[param['name']]
+        
         if return_block['type'] != return_type:
             print('Error in block')
             exit(3)
     
-    def visitBlock(self, ctx: CymbolParser.BlockContext):
+    def visitBlock(self, ctx: CymbolParser.BlockContext, params):
         tyype = Type.VOID
         for stat in ctx.stat():
             ret = self.visit(stat)

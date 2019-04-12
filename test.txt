@@ -1,6 +1,5 @@
-int a(string a, string b){
-    return a+b;
+boolean a = true;
+string foo(string x, string b, string s){
+    if(true) return "miss";
+    return "return" + x + b + s; 
 }
-string c = "asdhas";
-int d = 3;
-int e = a(c,d);
