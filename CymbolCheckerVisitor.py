@@ -156,8 +156,6 @@ class CymbolCheckerVisitor(CymbolVisitor):
                 print('expecting some return')
                 exit(3)
         else:
-            print('returns:')
-            print(returns)
             for ret in returns:
                 if not self.canReceive(return_type, ret['type']):
                     out = "TypeError: Wrong return type at line " + ret['line'] + " column " + ret['column']
@@ -174,9 +172,7 @@ class CymbolCheckerVisitor(CymbolVisitor):
                     ret = [ret]
                 for r in ret:
                     if r not in types:
-                        print(ret)
                         types.append(r)
-        print(types)
         return types
     
     def visitIfStat(self, ctx: CymbolParser.IfStatContext):
@@ -188,6 +184,16 @@ class CymbolCheckerVisitor(CymbolVisitor):
             exit(3)
         
         return self.visit(ctx.ifElseExprStat())
+    
+    def visitElseStat(self, ctx: CymbolParser.ElseStatContext):
+        return self.visit(ctx.ifElseExprStat())
+
+    def visitIfElseStat(self, ctx: CymbolParser.IfElseStatContext):
+        out = self.visit(ctx.ifStat())
+        if ctx.elseStat() is not None:
+            out += self.visit(ctx.elseStat())
+        return out
+
 
     def visitReturnStat(self, ctx: CymbolParser.ReturnStatContext):
         val = self.visit(ctx.expr())

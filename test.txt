@@ -2,9 +2,16 @@ int a = 3;
 int y = 2;
 boolean foo(float b, float x){
     if(true){
-        return false;
+        if(b==3){
+            if(true){
+
+            }else{
+              return true;
+            }
+        }
+        return 13.7;
     } else {
-        return 5;
+        return true;
     } 
 }
 boolean c = foo(a, y);
