@@ -146,23 +146,38 @@ class CymbolCheckerVisitor(CymbolVisitor):
         for param in params:
             self.id_values[param['name']] = {'type': param['type']}
 
-        return_block = self.visitBlock(ctx.block(), params)
+        returns = self.visitBlock(ctx.block())
         
         #remove params variables
         for param in params:
             del self.id_values[param['name']]
-        
-        if return_block['type'] != return_type:
-            print('Error in block')
-            exit(3)
-    
-    def visitBlock(self, ctx: CymbolParser.BlockContext, params):
-        tyype = Type.VOID
+        if len(returns) == 0:
+            if return_type != Type.VOID:
+                print('expecting some return')
+                exit(3)
+        else:
+            print('returns:')
+            print(returns)
+            for ret in returns:
+                if not self.canReceive(return_type, ret['type']):
+                    out = "TypeError: Wrong return type at line " + ret['line'] + " column " + ret['column']
+                    out += ". Passed "+  ret['type'] + ", expected " + return_type + "."
+                    print(out)
+                    exit(3)
+    #TO-DO: check multiple levels returns
+    def visitBlock(self, ctx: CymbolParser.BlockContext):
+        types = []
         for stat in ctx.stat():
             ret = self.visit(stat)
-            if ret is not None and 'type' in ret:
-                tyype = ret['type']
-        return {'type': tyype}
+            if ret is not None:
+                if not isinstance(ret, list):
+                    ret = [ret]
+                for r in ret:
+                    if r not in types:
+                        print(ret)
+                        types.append(r)
+        print(types)
+        return types
     
     def visitIfStat(self, ctx: CymbolParser.IfStatContext):
         condition = self.visit(ctx.expr())
@@ -171,9 +186,14 @@ class CymbolCheckerVisitor(CymbolVisitor):
             out += ". Passed "+  condition['type'] + ", expected boolean."
             print(out)
             exit(3)
+        
+        return self.visit(ctx.ifElseExprStat())
 
     def visitReturnStat(self, ctx: CymbolParser.ReturnStatContext):
-        return self.visit(ctx.expr())
+        val = self.visit(ctx.expr())
+        val['line'] = str(ctx.expr().start.line)
+        val['column'] = str(ctx.expr().start.column)
+        return val
 
     def visitParamTypeList(self, ctx: CymbolParser.ParamTypeListContext):
         params = []
